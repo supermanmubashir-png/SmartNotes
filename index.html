@@ -18,6 +18,27 @@
       transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
     .text-sm-custom { font-size: var(--note-font-size, 0.875rem); }
+
+    /* Hide scrollbars on horizontal AI chip row */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Bottom nav safe area */
+    #bottomNav { padding-bottom: calc(env(safe-area-inset-bottom, 0) + 8px); }
+
+    /* Content padding so bottom nav doesn't cover */
+    #mainContainer, #settingsView { padding-bottom: 96px; }
+
+    /* AI result fade-in */
+    @keyframes aiFade { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+    .ai-fade { animation: aiFade 0.2s ease-out; }
+
+    /* One UI tab active pill */
+    .nav-pill-active {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(79,70,229,0.35);
+    }
   </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col h-screen overflow-hidden select-none" id="appBody" style="--note-font-size: 0.875rem;">
@@ -55,25 +76,10 @@
       <button onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 p-2.5 rounded-xl text-slate-700 dark:text-slate-300 text-sm" title="Toggle Theme">
         <i id="themeIcon" class="fa-solid fa-moon"></i>
       </button>
-      <!-- Settings Menu Dropdown -->
-      <div class="relative">
-        <button onclick="toggleSettingsMenu()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 p-2.5 rounded-xl text-slate-700 dark:text-slate-300 text-sm" title="Settings">
-          <i class="fa-solid fa-gear"></i>
-        </button>
-        <div id="settingsDropdown" class="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl hidden z-30 p-2 space-y-1 text-xs">
-          <div class="px-3 py-2 font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Preferences</div>
-          <button onclick="promptSetPin()" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center space-x-2"><i class="fa-solid fa-lock w-4"></i><span>Set App PIN Lock</span></button>
-          <button onclick="cycleFontSize()" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center space-x-2"><i class="fa-solid fa-font w-4"></i><span>Font Size: <span id="fontSizeLabel">Normal</span></span></button>
-          <button onclick="cycleAccentColor()" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center space-x-2"><i class="fa-solid fa-palette w-4"></i><span>Theme Color</span></button>
-          <div class="border-t border-slate-200 dark:border-slate-800 my-1"></div>
-          <label class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center space-x-2 cursor-pointer">
-            <i class="fa-solid fa-upload w-4"></i><span>Import Backup JSON</span>
-            <input type="file" accept=".json" onchange="importNotes(event)" class="hidden">
-          </label>
-          <button onclick="exportNotes()" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center space-x-2"><i class="fa-solid fa-download w-4"></i><span>Export Backup JSON</span></button>
-          <button onclick="showStorageStats()" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center space-x-2"><i class="fa-solid fa-database w-4"></i><span>Storage Usage</span></button>
-        </div>
-      </div>
+      <!-- Settings shortcut (goes to Settings tab) -->
+      <button onclick="switchMainTab('settings')" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 p-2.5 rounded-xl text-slate-700 dark:text-slate-300 text-sm" title="Settings">
+        <i class="fa-solid fa-gear"></i>
+      </button>
       <button onclick="openNoteModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl font-medium text-sm flex items-center space-x-1.5 shadow-md shadow-indigo-600/30">
         <i class="fa-solid fa-plus"></i>
         <span>New</span>
@@ -81,56 +87,216 @@
     </div>
   </header>
 
-  <!-- Navigation Views Tabs -->
-  <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex space-x-4 text-sm font-medium overflow-x-auto">
-    <button onclick="switchTab('notes')" id="tabNotes" class="py-2.5 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 whitespace-nowrap">Notes</button>
-    <button onclick="switchTab('favorites')" id="tabFavorites" class="py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 whitespace-nowrap">Favorites ⭐</button>
-    <button onclick="switchTab('todos')" id="tabTodos" class="py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 whitespace-nowrap">To-Do Hub</button>
-    <button onclick="switchTab('archive')" id="tabArchive" class="py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 whitespace-nowrap">Archive</button>
-    <button onclick="switchTab('trash')" id="tabTrash" class="py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 whitespace-nowrap">Trash 🗑️</button>
+  <!-- ===================== NOTES VIEW ===================== -->
+  <div id="notesView" class="flex flex-col flex-1 min-h-0">
+    <!-- Navigation Views Tabs -->
+    <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex space-x-4 text-sm font-medium overflow-x-auto no-scrollbar">
+      <button onclick="switchTab('notes')" id="tabNotes" class="py-2.5 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 whitespace-nowrap">Notes</button>
+      <button onclick="switchTab('favorites')" id="tabFavorites" class="py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 whitespace-nowrap">Favorites ⭐</button>
+      <button onclick="switchTab('todos')" id="tabTodos" class="py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 whitespace-nowrap">To-Do Hub</button>
+      <button onclick="switchTab('archive')" id="tabArchive" class="py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 whitespace-nowrap">Archive</button>
+      <button onclick="switchTab('trash')" id="tabTrash" class="py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 whitespace-nowrap">Trash 🗑️</button>
+    </div>
+
+    <!-- Search, Filter & Bulk Bar -->
+    <div class="bg-slate-100/70 dark:bg-slate-900/50 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 space-y-2">
+      <div class="flex items-center space-x-2">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-sm"></i>
+          <input type="text" id="searchInput" oninput="filterContent()" placeholder="Search title or content..." 
+            class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-200 shadow-sm">
+        </div>
+        <select id="tagFilter" onchange="filterContent()" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 shadow-sm">
+          <option value="">All Tags</option>
+          <option value="Personal">Personal</option>
+          <option value="Work">Work</option>
+          <option value="Ideas">Ideas</option>
+          <option value="Important">Important</option>
+        </select>
+      </div>
+      <div class="flex items-center justify-between text-xs text-slate-500 px-1">
+        <span id="itemCount">0 items saved</span>
+        <div class="flex items-center space-x-3">
+          <button onclick="toggleSortOrder()" id="sortBtn" class="hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center space-x-1">
+            <i class="fa-solid fa-arrow-down-wide-short"></i>
+            <span id="sortLabel">Newest</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="flex-1 overflow-y-auto p-4 space-y-3 text-sm-custom" id="mainContainer">
+      <!-- Dynamic content renders here -->
+    </main>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400 dark:text-slate-500">
+      <i class="fa-regular fa-note-sticky text-5xl mb-3 text-slate-300 dark:text-slate-600"></i>
+      <p class="text-base font-medium" id="emptyTitle">No notes found</p>
+      <p class="text-xs text-slate-400 dark:text-slate-600 mt-1">Tap the 'New' button to create your entry.</p>
+    </div>
   </div>
 
-  <!-- Search, Filter & Bulk Bar -->
-  <div class="bg-slate-100/70 dark:bg-slate-900/50 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 space-y-2">
-    <div class="flex items-center space-x-2">
-      <div class="relative flex-1">
-        <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-sm"></i>
-        <input type="text" id="searchInput" oninput="filterContent()" placeholder="Search title or content..." 
-          class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-200 shadow-sm">
+  <!-- ===================== SETTINGS VIEW ===================== -->
+  <div id="settingsView" class="hidden flex-1 overflow-y-auto p-4 space-y-4 text-sm">
+
+    <!-- AI ASSISTANT -->
+    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+      <div class="flex items-center space-x-2 mb-1">
+        <div class="bg-gradient-to-br from-indigo-500 to-purple-500 text-white p-1.5 rounded-lg">
+          <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+        </div>
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">AI Assistant</h3>
+        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 font-semibold">FREE MODELS</span>
       </div>
-      <select id="tagFilter" onchange="filterContent()" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 shadow-sm">
-        <option value="">All Tags</option>
-        <option value="Personal">Personal</option>
-        <option value="Work">Work</option>
-        <option value="Ideas">Ideas</option>
-        <option value="Important">Important</option>
+      <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+        Optional. Uses your own OpenRouter key stored only in this browser. Sent directly to OpenRouter — no backend.
+      </p>
+
+      <label class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">OpenRouter API Key</label>
+      <div class="flex items-center space-x-2 mb-2">
+        <input type="password" id="aiApiKey" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false"
+          class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-200 font-mono">
+        <button onclick="toggleKeyVisibility()" id="keyVisBtn" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-xl text-xs font-medium">Show</button>
+      </div>
+      <div class="flex flex-wrap gap-2 mb-3">
+        <button onclick="saveApiKey()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-medium shadow-md shadow-indigo-600/30">Save Key</button>
+        <button onclick="removeApiKey()" class="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 px-3 py-1.5 rounded-xl text-xs font-medium">Remove</button>
+        <button onclick="testApiConnection()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-1.5 rounded-xl text-xs font-medium">Test Connection</button>
+      </div>
+      <div id="keyStatus" class="text-[11px] flex items-center space-x-1.5 mb-1">
+        <span class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" id="keyStatusDot"></span>
+        <span class="text-slate-500 dark:text-slate-400" id="keyStatusText">No key saved</span>
+      </div>
+      <div id="keyTestResult" class="text-[11px] mt-2"></div>
+      <p class="text-[10.5px] text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
+        Get a key at <a href="https://openrouter.ai/keys" target="_blank" class="text-indigo-600 dark:text-indigo-400 underline">openrouter.ai/keys</a>.
+        A client-side key cannot be kept truly secret.
+      </p>
+    </section>
+
+    <!-- AI MODEL -->
+    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">AI · Model</h3>
+      <label class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Free model</label>
+      <select id="aiModelSelect" onchange="onModelChange()"
+        class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 mb-2">
       </select>
-    </div>
-    <div class="flex items-center justify-between text-xs text-slate-500 px-1">
-      <span id="itemCount">0 items saved</span>
-      <div class="flex items-center space-x-3">
-        <button onclick="toggleSortOrder()" id="sortBtn" class="hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center space-x-1">
-          <i class="fa-solid fa-arrow-down-wide-short"></i>
-          <span id="sortLabel">Newest</span>
+      <a href="https://openrouter.ai/models?variant=free&order=most-popular" target="_blank"
+         class="text-[11px] text-indigo-600 dark:text-indigo-400 underline inline-flex items-center space-x-1 mb-2">
+        <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+        <span>Browse popular free models</span>
+      </a>
+      <div id="aiCustomModelWrap" class="hidden">
+        <label class="text-xs text-slate-500 dark:text-slate-400 mb-1 block mt-2">Custom free model ID</label>
+        <input type="text" id="aiCustomModel" placeholder="vendor/model:free" spellcheck="false"
+          class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-200 font-mono">
+        <p class="text-[10.5px] text-slate-400 dark:text-slate-500 mt-1">Must end with <code>:free</code>.</p>
+      </div>
+    </section>
+
+    <!-- AI OUTPUT -->
+    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">AI · Output Preferences</h3>
+      <label class="text-xs text-slate-500 dark:text-slate-400 mb-1 flex justify-between">
+        <span>Creativity (temperature)</span><span id="aiTempVal" class="text-slate-600 dark:text-slate-300 font-semibold">0.4</span>
+      </label>
+      <input type="range" id="aiTemperature" min="0" max="1.5" step="0.1" value="0.4" oninput="onTempChange(this.value)" class="w-full accent-indigo-600 mb-3">
+      <label class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Max output tokens</label>
+      <input type="number" id="aiMaxTokens" min="64" max="4000" step="64" value="900" onchange="saveAiPref('maxTokens', this.value)"
+        class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-200 mb-3">
+      <label class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Preferred response language</label>
+      <input type="text" id="aiLanguage" placeholder="e.g. English, हिन्दी, Español" maxlength="40" onchange="saveAiPref('aiLanguage', this.value)"
+        class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-200">
+      <p class="text-[10.5px] text-slate-400 dark:text-slate-500 mt-1">Leave blank to match the note's language.</p>
+    </section>
+
+    <!-- APPEARANCE -->
+    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Appearance</h3>
+      <div class="flex items-center justify-between py-2">
+        <div>
+          <div class="text-sm font-medium">Dark theme</div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400">Switch between light and dark</div>
+        </div>
+        <button onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-xl text-xs font-medium">
+          <i id="themeIconSettings" class="fa-solid fa-moon"></i>
         </button>
       </div>
-    </div>
-  </div>
+      <div class="border-t border-slate-100 dark:border-slate-800 my-1"></div>
+      <div class="flex items-center justify-between py-2">
+        <div>
+          <div class="text-sm font-medium">Font size</div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400">Text size in notes</div>
+        </div>
+        <button onclick="cycleFontSize()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-xl text-xs font-medium">
+          <span id="fontSizeLabel">Normal</span>
+        </button>
+      </div>
+      <div class="border-t border-slate-100 dark:border-slate-800 my-1"></div>
+      <div class="flex items-center justify-between py-2">
+        <div>
+          <div class="text-sm font-medium">Theme color</div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400">Accent used across the app</div>
+        </div>
+        <button onclick="cycleAccentColor()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-xl text-xs font-medium">
+          <i class="fa-solid fa-palette mr-1"></i><span id="accentLabel">Indigo</span>
+        </button>
+      </div>
+    </section>
 
-  <!-- Main Container -->
-  <main class="flex-1 overflow-y-auto p-4 space-y-3 text-sm-custom" id="mainContainer">
-    <!-- Dynamic content renders here -->
-  </main>
+    <!-- SECURITY -->
+    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Security</h3>
+      <div class="flex items-center justify-between py-2">
+        <div>
+          <div class="text-sm font-medium">App PIN lock</div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400" id="pinStatusText">Not set</div>
+        </div>
+        <div class="flex space-x-2">
+          <button onclick="promptSetPin()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-medium">Set PIN</button>
+          <button onclick="removePin()" class="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 px-3 py-1.5 rounded-xl text-xs font-medium">Remove</button>
+        </div>
+      </div>
+    </section>
 
-  <!-- Empty State -->
-  <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400 dark:text-slate-500">
-    <i class="fa-regular fa-note-sticky text-5xl mb-3 text-slate-300 dark:text-slate-600"></i>
-    <p class="text-base font-medium" id="emptyTitle">No notes found</p>
-    <p class="text-xs text-slate-400 dark:text-slate-600 mt-1">Tap the 'New' button to create your entry.</p>
+    <!-- DATA -->
+    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Data &amp; Backup</h3>
+      <div class="space-y-2">
+        <button onclick="exportNotes()" class="w-full text-left px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center space-x-2 text-sm">
+          <i class="fa-solid fa-download w-4 text-indigo-500"></i><span>Export backup JSON</span>
+        </button>
+        <label class="w-full text-left px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center space-x-2 cursor-pointer text-sm">
+          <i class="fa-solid fa-upload w-4 text-indigo-500"></i><span>Import backup JSON</span>
+          <input type="file" accept=".json" onchange="importNotes(event)" class="hidden">
+        </label>
+        <button onclick="showStorageStats()" class="w-full text-left px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl flex items-center space-x-2 text-sm">
+          <i class="fa-solid fa-database w-4 text-indigo-500"></i><span>Storage usage</span>
+        </button>
+        <button onclick="clearAllData()" class="w-full text-left px-3 py-2.5 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl flex items-center space-x-2 text-sm text-rose-600 dark:text-rose-400">
+          <i class="fa-solid fa-trash-can w-4"></i><span>Clear all local data</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">About</h3>
+      <div class="flex justify-between py-1.5 text-sm"><span class="text-slate-500 dark:text-slate-400">App</span><span class="font-semibold">SMART NOTES</span></div>
+      <div class="flex justify-between py-1.5 text-sm"><span class="text-slate-500 dark:text-slate-400">Version</span><span class="font-semibold">1.0.0</span></div>
+      <div class="flex justify-between py-1.5 text-sm"><span class="text-slate-500 dark:text-slate-400">Storage</span><span class="font-semibold">IndexedDB (local)</span></div>
+      <div class="flex justify-between py-1.5 text-sm"><span class="text-slate-500 dark:text-slate-400">AI</span><span class="font-semibold">OpenRouter (free models)</span></div>
+      <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-3 leading-relaxed">
+        No account, no server, no analytics. Your notes stay on this device.
+      </p>
+    </section>
+
   </div>
 
   <!-- Quick Scratchpad Drawer -->
-  <div id="scratchpadDrawer" class="fixed inset-x-0 bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 shadow-2xl z-40 transform translate-y-full transition-transform duration-200">
+  <div id="scratchpadDrawer" class="fixed inset-x-0 bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 shadow-2xl z-40 transform translate-y-full transition-transform duration-200" style="margin-bottom:72px;">
     <div class="flex justify-between items-center mb-2">
       <h3 class="font-bold text-sm text-indigo-600 dark:text-indigo-400"><i class="fa-solid fa-note-sticky mr-1.5"></i> Quick Scratchpad</h3>
       <button onclick="toggleScratchpad()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"><i class="fa-solid fa-xmark"></i></button>
@@ -139,9 +305,9 @@
       class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
   </div>
 
-  <!-- Note Add/Edit Modal -->
+  <!-- Note Add/Edit Modal (with AI) -->
   <div id="noteModal" class="fixed inset-0 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm z-50 hidden flex flex-col justify-end sm:justify-center sm:items-center p-0 sm:p-4">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl p-5 flex flex-col max-h-[90vh] shadow-2xl animate-in slide-in-from-bottom duration-200">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl p-5 flex flex-col max-h-[92vh] shadow-2xl animate-in slide-in-from-bottom duration-200">
       <div class="flex justify-between items-center mb-3">
         <h2 id="modalTitle" class="font-bold text-lg text-indigo-600 dark:text-indigo-400">New Smart Note</h2>
         <button onclick="closeNoteModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2">
@@ -153,7 +319,12 @@
       
       <div class="space-y-3 flex-1 overflow-y-auto pr-1">
         <div>
-          <label class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Title</label>
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs text-slate-500 dark:text-slate-400">Title</label>
+            <button onclick="runAIAction('title')" class="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium flex items-center space-x-1">
+              <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i><span>Generate</span>
+            </button>
+          </div>
           <input type="text" id="noteTitleInput" placeholder="Note Title..." oninput="saveDraft()"
             class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-200 shadow-sm">
         </div>
@@ -171,6 +342,32 @@
               </button>
             </div>
           </div>
+
+          <!-- AI ACTION CHIPS -->
+          <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1">
+            <button type="button" onclick="runAIAction('summarize')" class="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-medium whitespace-nowrap">
+              <i class="fa-solid fa-wand-magic-sparkles mr-1 text-[9px]"></i>Summarize
+            </button>
+            <button type="button" onclick="runAIAction('rewrite')" class="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-medium whitespace-nowrap">
+              <i class="fa-solid fa-pen-fancy mr-1 text-[9px]"></i>Rewrite
+            </button>
+            <button type="button" onclick="runAIAction('grammar')" class="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-medium whitespace-nowrap">
+              <i class="fa-solid fa-spell-check mr-1 text-[9px]"></i>Fix Grammar
+            </button>
+            <button type="button" onclick="runAIAction('simplify')" class="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-medium whitespace-nowrap">
+              <i class="fa-solid fa-feather mr-1 text-[9px]"></i>Simplify
+            </button>
+            <button type="button" onclick="runAIAction('keypoints')" class="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-medium whitespace-nowrap">
+              <i class="fa-solid fa-list mr-1 text-[9px]"></i>Key Points
+            </button>
+            <button type="button" onclick="runAIAction('tags')" class="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-medium whitespace-nowrap">
+              <i class="fa-solid fa-tags mr-1 text-[9px]"></i>Tags
+            </button>
+            <button type="button" onclick="askQuestion()" class="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 font-medium whitespace-nowrap">
+              <i class="fa-solid fa-circle-question mr-1 text-[9px]"></i>Ask
+            </button>
+          </div>
+
           <textarea id="noteContentInput" rows="6" placeholder="Write notes, use Markdown, or bullet lists..." oninput="updateStats(); saveDraft();"
             class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-200 resize-none shadow-sm"></textarea>
           
@@ -179,6 +376,30 @@
           <div class="flex justify-between items-center text-[11px] text-slate-400 mt-1 px-1">
             <span id="editorStats">0 words • 0 chars</span>
             <span id="autoSaveIndicator" class="text-emerald-500 font-medium">All changes saved</span>
+          </div>
+
+          <!-- AI RESULT PANEL -->
+          <div id="aiPanel" class="hidden mt-3 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/60 dark:bg-indigo-950/30 p-3 ai-fade">
+            <div class="flex items-center justify-between mb-2">
+              <span id="aiPanelLabel" class="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI Result
+              </span>
+              <button type="button" onclick="closeAiPanel()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+            <div id="aiPanelBody" class="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-words max-h-52 overflow-y-auto bg-white dark:bg-slate-900 rounded-lg p-2.5 border border-slate-200 dark:border-slate-800"></div>
+            <div id="aiPanelActions" class="flex gap-2 mt-2">
+              <button type="button" onclick="applyAiResult()" id="aiApplyBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow-md shadow-indigo-600/30">
+                <i class="fa-solid fa-check mr-1"></i>Apply
+              </button>
+              <button type="button" onclick="copyAiResult()" class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-semibold">
+                <i class="fa-solid fa-copy mr-1"></i>Copy
+              </button>
+              <button type="button" onclick="closeAiPanel()" class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-semibold">
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
 
@@ -225,6 +446,22 @@
     </div>
   </div>
 
+  <!-- ===================== ONE UI 8.5 STYLE BOTTOM NAV ===================== -->
+  <nav id="bottomNav" class="fixed bottom-0 left-0 right-0 z-40 px-4 pt-2 pointer-events-none">
+    <div class="max-w-md mx-auto bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl shadow-black/20 flex items-center p-1.5 pointer-events-auto">
+      <button onclick="switchMainTab('notes')" id="navNotes"
+        class="flex-1 flex flex-col items-center justify-center py-2 px-3 rounded-2xl transition-all duration-200 nav-pill-active">
+        <i class="fa-solid fa-note-sticky text-base mb-0.5"></i>
+        <span class="text-[10px] font-semibold">Notes</span>
+      </button>
+      <button onclick="switchMainTab('settings')" id="navSettings"
+        class="flex-1 flex flex-col items-center justify-center py-2 px-3 rounded-2xl transition-all duration-200 text-slate-500 dark:text-slate-400">
+        <i class="fa-solid fa-gear text-base mb-0.5"></i>
+        <span class="text-[10px] font-semibold">Settings</span>
+      </button>
+    </div>
+  </nav>
+
   <!-- App Script Logic -->
   <script>
     if ('serviceWorker' in navigator) {
@@ -235,26 +472,49 @@
     let notes = [];
     let todos = [];
     let currentTab = 'notes';
+    let currentMainTab = 'notes';
     let sortNewest = true;
     let isPreviewing = false;
     let currentReadingNote = null;
     let currentAccent = localStorage.getItem('appAccent') || 'indigo';
+    let currentAiAction = null;
+    let currentAiResultText = '';
+    let aiAbortController = null;
+    let aiBusy = false;
 
-    // Theme & Appearance Setup
+    /* Free models list */
+    const FREE_MODELS = [
+      { id: 'nvidia/nemotron-3-super:free',                          label: 'NVIDIA Nemotron 3 Super (free)' },
+      { id: 'meta-llama/llama-3.3-70b-instruct:free',                label: 'Llama 3.3 70B Instruct (free)' },
+      { id: 'google/gemini-2.0-flash-exp:free',                      label: 'Gemini 2.0 Flash Exp (free)' },
+      { id: 'deepseek/deepseek-chat-v3-0324:free',                   label: 'DeepSeek Chat v3 (free)' },
+      { id: 'deepseek/deepseek-r1:free',                             label: 'DeepSeek R1 (free)' },
+      { id: 'qwen/qwen-2.5-72b-instruct:free',                       label: 'Qwen 2.5 72B Instruct (free)' },
+      { id: 'qwen/qwen-2.5-coder-32b-instruct:free',                 label: 'Qwen 2.5 Coder 32B (free)' },
+      { id: 'mistralai/mistral-small-3.1-24b-instruct:free',         label: 'Mistral Small 3.1 (free)' },
+      { id: 'microsoft/phi-3-medium-128k-instruct:free',             label: 'Phi-3 Medium 128k (free)' },
+      { id: 'google/gemma-2-9b-it:free',                             label: 'Gemma 2 9B (free)' },
+      { id: 'meta-llama/llama-3.1-8b-instruct:free',                 label: 'Llama 3.1 8B (free)' },
+      { id: 'moonshotai/kimi-k2:free',                               label: 'Kimi K2 (free)' }
+    ];
+    const DEFAULT_MODEL = FREE_MODELS[1].id;
+
+    /* ---------------- Theme & Appearance ---------------- */
     applyThemeSettings();
 
     function applyThemeSettings() {
       if (localStorage.theme === 'light') {
         document.documentElement.classList.remove('dark');
         document.getElementById('themeIcon').className = "fa-solid fa-sun";
+        document.getElementById('themeIconSettings').className = "fa-solid fa-sun";
         document.getElementById('metaThemeColor').setAttribute('content', '#ffffff');
       } else {
         document.documentElement.classList.add('dark');
         document.getElementById('themeIcon').className = "fa-solid fa-moon";
+        document.getElementById('themeIconSettings').className = "fa-solid fa-moon";
         document.getElementById('metaThemeColor').setAttribute('content', '#4f46e5');
       }
 
-      // Font size setting
       const fs = localStorage.getItem('fontSize') || '0.875rem';
       document.getElementById('appBody').style.setProperty('--note-font-size', fs);
       const fsLabel = fs === '0.75rem' ? 'Compact' : (fs === '1rem' ? 'Large' : 'Normal');
@@ -281,18 +541,51 @@
 
     function cycleAccentColor() {
       const accents = ['indigo', 'emerald', 'amber', 'rose'];
+      const labels = { indigo: 'Indigo', emerald: 'Emerald', amber: 'Amber', rose: 'Rose' };
       let idx = accents.indexOf(currentAccent) + 1;
       if (idx >= accents.length) idx = 0;
       currentAccent = accents[idx];
       localStorage.setItem('appAccent', currentAccent);
-      alert('Accent theme updated! Refresh app to view full color changes.');
+      document.getElementById('accentLabel').innerText = labels[currentAccent];
+      applyAccentOverride();
     }
 
-    // PIN Security Check
+    function applyAccentOverride() {
+      // Soft accent override - only affects the main brand elements
+      const colors = {
+        indigo: '#4f46e5',
+        emerald: '#10b981',
+        amber: '#f59e0b',
+        rose: '#e11d48'
+      };
+      const c = colors[currentAccent] || colors.indigo;
+      const styleId = 'accentOverrideStyle';
+      let style = document.getElementById(styleId);
+      if (!style) {
+        style = document.createElement('style');
+        style.id = styleId;
+        document.head.appendChild(style);
+      }
+      style.textContent = `
+        #appLogoBadge, #navNotes.nav-pill-active { background: ${c} !important; background-image: none !important; box-shadow: 0 6px 18px ${c}55 !important; }
+        #appTitleText { color: ${c} !important; }
+        .bg-indigo-600 { background-color: ${c} !important; }
+        .text-indigo-600 { color: ${c} !important; }
+        .border-indigo-600 { border-color: ${c} !important; }
+        .bg-indigo-600:hover, button.bg-indigo-600:hover { background-color: ${c}dd !important; }
+      `;
+      const labels = { indigo: 'Indigo', emerald: 'Emerald', amber: 'Amber', rose: 'Rose' };
+      document.getElementById('accentLabel').innerText = labels[currentAccent];
+    }
+
+    applyAccentOverride();
+
+    /* ---------------- PIN Security ---------------- */
     const storedPin = localStorage.getItem('appPin');
     if (storedPin) {
       document.getElementById('lockScreen').classList.remove('hidden');
     }
+    updatePinStatus();
 
     function verifyPin() {
       const p = document.getElementById('p1').value + document.getElementById('p2').value + document.getElementById('p3').value + document.getElementById('p4').value;
@@ -310,9 +603,23 @@
       if (pin && pin.length === 4) {
         localStorage.setItem('appPin', pin);
         alert('PIN Lock enabled successfully!');
+        updatePinStatus();
       } else if (pin) {
         alert('PIN must be exactly 4 digits.');
       }
+    }
+
+    function removePin() {
+      if (!localStorage.getItem('appPin')) { alert('No PIN set.'); return; }
+      if (confirm('Remove PIN lock?')) {
+        localStorage.removeItem('appPin');
+        updatePinStatus();
+      }
+    }
+
+    function updatePinStatus() {
+      const el = document.getElementById('pinStatusText');
+      if (el) el.innerText = localStorage.getItem('appPin') ? 'PIN is set' : 'Not set';
     }
 
     function clearPinSetup() {
@@ -320,7 +627,33 @@
       location.reload();
     }
 
-    // Initialize Database
+    /* ---------------- Main Tab (bottom nav) ---------------- */
+    function switchMainTab(tab) {
+      currentMainTab = tab;
+      const notesView = document.getElementById('notesView');
+      const settingsView = document.getElementById('settingsView');
+      const navNotes = document.getElementById('navNotes');
+      const navSettings = document.getElementById('navSettings');
+
+      if (tab === 'settings') {
+        notesView.classList.add('hidden');
+        settingsView.classList.remove('hidden');
+        navSettings.classList.add('nav-pill-active');
+        navSettings.classList.remove('text-slate-500', 'dark:text-slate-400');
+        navNotes.classList.remove('nav-pill-active');
+        navNotes.classList.add('text-slate-500', 'dark:text-slate-400');
+        refreshSettingsUI();
+      } else {
+        settingsView.classList.add('hidden');
+        notesView.classList.remove('hidden');
+        navNotes.classList.add('nav-pill-active');
+        navNotes.classList.remove('text-slate-500', 'dark:text-slate-400');
+        navSettings.classList.remove('nav-pill-active');
+        navSettings.classList.add('text-slate-500', 'dark:text-slate-400');
+      }
+    }
+
+    /* ---------------- Initialize Database ---------------- */
     const request = indexedDB.open('SmartNotesUltimateDB', 1);
     request.onerror = (e) => console.error('DB error:', e.target.error);
     request.onsuccess = (e) => {
@@ -405,8 +738,6 @@
         return;
       }
       emptyState.classList.add('hidden');
-
-      const searchQuery = document.getElementById('searchInput').value.toLowerCase();
 
       data.forEach(note => {
         const card = document.createElement('div');
@@ -493,9 +824,10 @@
       });
     }
 
-    // Modal & Note CRUD
+    /* ---------------- Note CRUD ---------------- */
     function openNoteModal(id = null) {
       document.getElementById('noteModal').classList.remove('hidden');
+      closeAiPanel();
       if (id) {
         document.getElementById('modalTitle').innerText = 'Edit Note';
         const note = notes.find(n => n.id === id);
@@ -519,6 +851,7 @@
 
     function closeNoteModal() {
       document.getElementById('noteModal').classList.add('hidden');
+      closeAiPanel();
       localStorage.removeItem('smartNotesDraft');
     }
 
@@ -644,7 +977,7 @@
       }
     }
 
-    // Reader Mode & Export
+    /* ---------------- Reader Mode & Export ---------------- */
     function openReader(note) {
       currentReadingNote = note;
       document.getElementById('readerTitle').innerText = note.title || 'Untitled Note';
@@ -674,7 +1007,7 @@
       dl.remove();
     }
 
-    // Scratchpad Drawer
+    /* ---------------- Scratchpad ---------------- */
     function toggleScratchpad() {
       const drawer = document.getElementById('scratchpadDrawer');
       drawer.classList.toggle('translate-y-full');
@@ -689,23 +1022,31 @@
       if (val) document.getElementById('scratchpadInput').value = val;
     }
 
-    // Settings Dropdown & Storage Stats
-    function toggleSettingsMenu() {
-      document.getElementById('settingsDropdown').classList.toggle('hidden');
-    }
-
+    /* ---------------- Storage Stats ---------------- */
     function showStorageStats() {
       if (navigator.storage && navigator.storage.estimate) {
         navigator.storage.estimate().then(estimate => {
           const usedMB = (estimate.usage / (1024*1024)).toFixed(2);
-          alert(`Storage Used: ${usedMB} MB in Local IndexedDB.`);
+          alert(`Storage Used: ${usedMB} MB in Local IndexedDB.\n\nNotes: ${notes.length}\nTo-Dos: ${todos.length}`);
         });
       } else {
         alert(`Total Saved Notes: ${notes.length} | To-Dos: ${todos.length}`);
       }
     }
 
-    // Todo Hub
+    function clearAllData() {
+      if (!confirm('Delete ALL notes, todos, drafts and settings?')) return;
+      if (!confirm('This cannot be undone. Are you absolutely sure?')) return;
+      const tx = db.transaction(['notes', 'todos'], 'readwrite');
+      tx.objectStore('notes').clear();
+      tx.objectStore('todos').clear();
+      tx.oncomplete = () => {
+        localStorage.clear();
+        location.reload();
+      };
+    }
+
+    /* ---------------- Todo Hub ---------------- */
     function addTodoItem() {
       const input = document.getElementById('newTodoInput');
       const text = input.value.trim();
@@ -731,7 +1072,7 @@
       tx.oncomplete = () => loadAllData();
     }
 
-    // Text Formatting & Voice
+    /* ---------------- Text Tools ---------------- */
     function transformTextCase(type) {
       const ta = document.getElementById('noteContentInput');
       if (type === 'upper') ta.value = ta.value.toUpperCase();
@@ -781,7 +1122,7 @@
       recognition.start();
     }
 
-    // Backup Export / Import
+    /* ---------------- Backup Export / Import ---------------- */
     function exportNotes() {
       const backup = { notes, todos };
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
@@ -809,8 +1150,443 @@
       reader.readAsText(file);
     }
 
+    /* ============================================================
+       AI FEATURES (OpenRouter free models)
+       ============================================================ */
+    function getApiKey() {
+      try { return (localStorage.getItem('smartnotes.openrouter.key') || '').trim(); } catch (e) { return ''; }
+    }
+    function setApiKey(k) {
+      try { localStorage.setItem('smartnotes.openrouter.key', (k || '').trim()); } catch (e) {}
+    }
+    function clearApiKey() {
+      try { localStorage.removeItem('smartnotes.openrouter.key'); } catch (e) {}
+    }
+    function getModel() {
+      return localStorage.getItem('smartnotes.model') || DEFAULT_MODEL;
+    }
+    function setModel(m) { localStorage.setItem('smartnotes.model', m); }
+    function getTemperature() {
+      const v = parseFloat(localStorage.getItem('smartnotes.temperature'));
+      return isNaN(v) ? 0.4 : Math.max(0, Math.min(1.5, v));
+    }
+    function getMaxTokens() {
+      const v = parseInt(localStorage.getItem('smartnotes.maxTokens'));
+      return isNaN(v) ? 900 : Math.max(64, Math.min(4000, v));
+    }
+    function getAiLanguage() {
+      return localStorage.getItem('smartnotes.aiLanguage') || '';
+    }
+
+    function saveAiPref(key, value) {
+      localStorage.setItem('smartnotes.' + key, value);
+    }
+
+    function toggleKeyVisibility() {
+      const input = document.getElementById('aiApiKey');
+      const btn = document.getElementById('keyVisBtn');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerText = 'Hide';
+      } else {
+        input.type = 'password';
+        btn.innerText = 'Show';
+      }
+    }
+
+    function saveApiKey() {
+      const v = document.getElementById('aiApiKey').value.trim();
+      if (!v) { alert('Enter an API key first.'); return; }
+      if (!v.startsWith('sk-or-')) {
+        if (!confirm('That does not look like an OpenRouter key (usually starts with "sk-or-"). Save anyway?')) return;
+      }
+      setApiKey(v);
+      updateKeyStatus();
+      alert('API key saved locally.');
+    }
+
+    function removeApiKey() {
+      if (!getApiKey()) { alert('No key saved.'); return; }
+      if (!confirm('Remove the saved OpenRouter API key?')) return;
+      clearApiKey();
+      document.getElementById('aiApiKey').value = '';
+      document.getElementById('keyTestResult').innerHTML = '';
+      updateKeyStatus();
+    }
+
+    function updateKeyStatus() {
+      const has = !!getApiKey();
+      const dot = document.getElementById('keyStatusDot');
+      const text = document.getElementById('keyStatusText');
+      if (has) {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+        text.className = 'text-emerald-600 dark:text-emerald-400';
+        text.innerText = 'Key saved in this browser';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600';
+        text.className = 'text-slate-500 dark:text-slate-400';
+        text.innerText = 'No key saved';
+      }
+    }
+
+    function buildModelSelect() {
+      const sel = document.getElementById('aiModelSelect');
+      sel.innerHTML = '';
+      FREE_MODELS.forEach(m => {
+        const o = document.createElement('option');
+        o.value = m.id; o.textContent = m.label;
+        sel.appendChild(o);
+      });
+      const custom = document.createElement('option');
+      custom.value = '__custom__';
+      custom.textContent = 'Custom free model ID…';
+      sel.appendChild(custom);
+
+      const current = getModel();
+      const known = FREE_MODELS.some(m => m.id === current);
+      if (current && !known) {
+        sel.value = '__custom__';
+        document.getElementById('aiCustomModelWrap').classList.remove('hidden');
+        document.getElementById('aiCustomModel').value = current;
+      } else {
+        sel.value = current || DEFAULT_MODEL;
+        document.getElementById('aiCustomModelWrap').classList.add('hidden');
+      }
+    }
+
+    function onModelChange() {
+      const sel = document.getElementById('aiModelSelect');
+      if (sel.value === '__custom__') {
+        document.getElementById('aiCustomModelWrap').classList.remove('hidden');
+        document.getElementById('aiCustomModel').focus();
+      } else {
+        document.getElementById('aiCustomModelWrap').classList.add('hidden');
+        setModel(sel.value);
+      }
+    }
+
+    function onTempChange(v) {
+      document.getElementById('aiTempVal').innerText = Number(v).toFixed(1);
+      saveAiPref('temperature', v);
+    }
+
+    function onCustomModelChange() {
+      const v = document.getElementById('aiCustomModel').value.trim();
+      if (!v) return;
+      if (!v.endsWith(':free')) {
+        alert('Version 1 supports free models only — the model ID must end with ":free".');
+        return;
+      }
+      setModel(v);
+    }
+
+    async function testApiConnection() {
+      const out = document.getElementById('keyTestResult');
+      if (!getApiKey()) { out.innerHTML = '<span class="text-amber-600 dark:text-amber-400">Save a key first.</span>'; return; }
+      if (!navigator.onLine) { out.innerHTML = '<span class="text-amber-600 dark:text-amber-400">You are offline. AI needs internet.</span>'; return; }
+      const model = getModel();
+      if (!model || !model.endsWith(':free')) {
+        out.innerHTML = '<span class="text-amber-600 dark:text-amber-400">Select a free model first.</span>'; return;
+      }
+      out.innerHTML = '<span class="text-indigo-600 dark:text-indigo-400"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Testing…</span>';
+      try {
+        await aiFetch({
+          model,
+          messages: [{ role: 'user', content: 'Reply with the single word: ok' }],
+          max_tokens: 5,
+          temperature: 0
+        }, 20000);
+        out.innerHTML = '<span class="text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-check mr-1"></i>Connection successful.</span>';
+      } catch (err) {
+        out.innerHTML = '<span class="text-rose-600 dark:text-rose-400">' + escapeHTML(aiErrorMessage(err)) + '</span>';
+      }
+    }
+
+    function aiErrorMessage(err) {
+      if (!err) return 'Unknown error';
+      const msg = err.message || String(err);
+      if (err.name === 'AbortError') return 'Request cancelled.';
+      if (/NO_KEY/.test(msg)) return 'No API key saved.';
+      if (/OFFLINE/.test(msg)) return 'You are offline. AI needs internet.';
+      if (/401|unauthor/i.test(msg)) return 'Invalid or unauthorized API key (401).';
+      if (/402|payment|credit/i.test(msg)) return 'OpenRouter reported insufficient credits (402).';
+      if (/403|forbidden/i.test(msg)) return 'The model refused the request (403).';
+      if (/404|not found/i.test(msg)) return 'Model not found (404). It may no longer be free.';
+      if (/429|rate/i.test(msg)) return 'Rate limit reached (429). Wait and try again.';
+      if (/5\d\d/.test(msg)) return 'OpenRouter server error. Try again later.';
+      if (/timeout|timed out|network/i.test(msg)) return 'Network problem or timeout.';
+      return msg;
+    }
+
+    async function aiFetch(payload, timeoutMs) {
+      const key = getApiKey();
+      if (!key) { const e = new Error('NO_KEY'); throw e; }
+      if (!navigator.onLine) { const e = new Error('OFFLINE'); throw e; }
+
+      const controller = new AbortController();
+      aiAbortController = controller;
+      const timer = setTimeout(() => controller.abort(), timeoutMs || 45000);
+
+      try {
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + key,
+            'HTTP-Referer': location.origin || 'https://localhost',
+            'X-Title': 'Smart Notes'
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+        if (!res.ok) { const e = new Error('HTTP ' + res.status); e.status = res.status; throw e; }
+        let data;
+        try { data = await res.json(); }
+        catch (e) { throw new Error('Malformed response from OpenRouter'); }
+        if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
+          throw new Error('Unexpected response shape from OpenRouter');
+        }
+        return data;
+      } finally {
+        clearTimeout(timer);
+        if (aiAbortController === controller) aiAbortController = null;
+      }
+    }
+
+    function langDirective() {
+      const lang = getAiLanguage().trim();
+      return lang ? (' Respond in ' + lang + '.') : '';
+    }
+
+    function buildPrompt(action, content) {
+      const dir = langDirective();
+      switch (action) {
+        case 'summarize':
+          return [
+            { role: 'system', content: 'You summarize notes clearly and concisely. Output plain text only, no HTML.' + dir },
+            { role: 'user', content: 'Summarize the following note in 3-6 sentences. Keep it faithful to the source.\n\n---\n' + content }
+          ];
+        case 'rewrite':
+          return [
+            { role: 'system', content: 'You rewrite text to improve clarity and flow while preserving meaning. Output plain text only.' + dir },
+            { role: 'user', content: 'Rewrite the following note to be clearer and better organized. Keep the same meaning.\n\n---\n' + content }
+          ];
+        case 'grammar':
+          return [
+            { role: 'system', content: "You correct grammar and spelling. Preserve the author's voice. Output plain text only." + dir },
+            { role: 'user', content: 'Correct spelling and grammar in the following note. Return the corrected version only.\n\n---\n' + content }
+          ];
+        case 'simplify':
+          return [
+            { role: 'system', content: 'You simplify text for easier reading. Output plain text only.' + dir },
+            { role: 'user', content: 'Rewrite the following note in simpler, plain language. Keep all key facts.\n\n---\n' + content }
+          ];
+        case 'keypoints':
+          return [
+            { role: 'system', content: 'You extract key points as a bullet list. Output plain text only, using "- " for bullets.' + dir },
+            { role: 'user', content: 'Extract the key points from this note as a concise bullet list.\n\n---\n' + content }
+          ];
+        case 'title':
+          return [
+            { role: 'system', content: 'You generate short, descriptive titles. Output only the title, no quotes.' + dir },
+            { role: 'user', content: 'Generate a short title (max 8 words) for this note.\n\n---\n' + content }
+          ];
+        case 'tags':
+          return [
+            { role: 'system', content: 'You suggest topical tags. Output a comma-separated list only, lowercase, 3-5 tags.' + dir },
+            { role: 'user', content: 'Suggest 3-5 short tags for this note. Reply with a comma-separated list only.\n\n---\n' + content }
+          ];
+        default:
+          return [{ role: 'user', content }];
+      }
+    }
+
+    function aiLabelFor(action) {
+      return ({
+        summarize: 'Summary', rewrite: 'Rewritten text', grammar: 'Corrected text',
+        simplify: 'Simplified text', keypoints: 'Key points', title: 'Suggested title',
+        tags: 'Suggested tags', ask: 'Answer'
+      })[action] || 'AI result';
+    }
+
+    async function runAIAction(action) {
+      if (aiBusy) { alert('An AI request is already running.'); return; }
+      if (!getApiKey()) { alert('Add your OpenRouter API key in Settings first.'); return; }
+      if (!navigator.onLine) { alert('AI requires internet access.'); return; }
+      const model = getModel();
+      if (!model || !model.endsWith(':free')) { alert('Select a free model in Settings.'); return; }
+
+      const content = document.getElementById('noteContentInput').value.trim();
+      if (!content) { alert('Write some content first.'); return; }
+
+      currentAiAction = action;
+      currentAiResultText = '';
+      aiBusy = true;
+      showAiPanelLoading(aiLabelFor(action));
+
+      try {
+        const messages = buildPrompt(action, content);
+        const data = await aiFetch({
+          model, messages,
+          max_tokens: getMaxTokens(),
+          temperature: getTemperature()
+        });
+        const out = (data.choices[0].message.content || '').trim();
+        if (!out) throw new Error('Empty response from model');
+        currentAiResultText = out;
+        showAiPanelResult(out, aiLabelFor(action));
+      } catch (err) {
+        showAiPanelError(aiErrorMessage(err));
+      } finally {
+        aiBusy = false;
+      }
+    }
+
+    async function askQuestion() {
+      if (aiBusy) { alert('An AI request is already running.'); return; }
+      if (!getApiKey()) { alert('Add your OpenRouter API key in Settings first.'); return; }
+      if (!navigator.onLine) { alert('AI requires internet access.'); return; }
+      const model = getModel();
+      if (!model || !model.endsWith(':free')) { alert('Select a free model in Settings.'); return; }
+
+      const content = document.getElementById('noteContentInput').value.trim();
+      if (!content) { alert('Write some content first.'); return; }
+
+      const question = prompt('Ask a question about this note:');
+      if (!question) return;
+
+      currentAiAction = 'ask';
+      currentAiResultText = '';
+      aiBusy = true;
+      showAiPanelLoading('Answer');
+
+      try {
+        const messages = [
+          { role: 'system', content:
+            'You answer questions using ONLY the provided note. ' +
+            'If the answer is not present, say so clearly. Output plain text only, no HTML.' + langDirective() },
+          { role: 'user', content: 'Question: ' + question + '\n\nNote:\n' + content }
+        ];
+        const data = await aiFetch({
+          model, messages,
+          max_tokens: getMaxTokens(),
+          temperature: getTemperature()
+        });
+        const out = (data.choices[0].message.content || '').trim();
+        if (!out) throw new Error('Empty response from model');
+        currentAiResultText = out;
+        showAiPanelResult(out, 'Answer');
+      } catch (err) {
+        showAiPanelError(aiErrorMessage(err));
+      } finally {
+        aiBusy = false;
+      }
+    }
+
+    function showAiPanelLoading(label) {
+      const panel = document.getElementById('aiPanel');
+      const body = document.getElementById('aiPanelBody');
+      const actions = document.getElementById('aiPanelActions');
+      document.getElementById('aiPanelLabel').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i>' + escapeHTML(label);
+      body.innerHTML = '<div class="flex items-center space-x-2 text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i><span>Working…</span></div>';
+      actions.style.display = 'none';
+      panel.classList.remove('hidden');
+    }
+
+    function showAiPanelResult(text, label) {
+      const panel = document.getElementById('aiPanel');
+      const body = document.getElementById('aiPanelBody');
+      const actions = document.getElementById('aiPanelActions');
+      document.getElementById('aiPanelLabel').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i>' + escapeHTML(label);
+      body.textContent = text;
+      actions.style.display = 'flex';
+
+      // Adjust apply button label per action
+      const applyBtn = document.getElementById('aiApplyBtn');
+      if (currentAiAction === 'title') applyBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i>Set Title';
+      else if (currentAiAction === 'tags') applyBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i>Add Tag';
+      else applyBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i>Replace Content';
+
+      panel.classList.remove('hidden');
+    }
+
+    function showAiPanelError(message) {
+      const panel = document.getElementById('aiPanel');
+      const body = document.getElementById('aiPanelBody');
+      const actions = document.getElementById('aiPanelActions');
+      document.getElementById('aiPanelLabel').innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>Error';
+      body.innerHTML = '<span class="text-rose-600 dark:text-rose-400">' + escapeHTML(message) + '</span>';
+      actions.style.display = 'none';
+      panel.classList.remove('hidden');
+    }
+
+    function closeAiPanel() {
+      document.getElementById('aiPanel').classList.add('hidden');
+      currentAiAction = null;
+      currentAiResultText = '';
+    }
+
+    function applyAiResult() {
+      if (!currentAiResultText) return;
+      const text = currentAiResultText;
+      if (currentAiAction === 'title') {
+        const first = text.split('\n')[0].replace(/^["'#\s]+|["'\s]+$/g, '').slice(0, 200);
+        document.getElementById('noteTitleInput').value = first;
+      } else if (currentAiAction === 'tags') {
+        const tags = text.split(/[,\n]/).map(s => s.trim().replace(/^#/, '').toLowerCase()).filter(Boolean);
+        const target = document.getElementById('noteTagInput');
+        // Try to match an existing tag
+        const existing = ['Personal', 'Work', 'Ideas', 'Important'];
+        const match = existing.find(e => tags.includes(e.toLowerCase()));
+        if (match) target.value = match;
+        else {
+          // Append the first tag to content as a hashtag
+          const content = document.getElementById('noteContentInput');
+          const hashtag = tags.slice(0, 3).map(t => '#' + t).join(' ');
+          content.value = content.value + (content.value ? '\n\n' : '') + hashtag;
+        }
+      } else {
+        document.getElementById('noteContentInput').value = text;
+      }
+      updateStats();
+      saveDraft();
+      closeAiPanel();
+    }
+
+    async function copyAiResult() {
+      if (!currentAiResultText) return;
+      try {
+        await navigator.clipboard.writeText(currentAiResultText);
+        alert('Copied to clipboard.');
+      } catch (e) {
+        alert('Copy failed — please select the text manually.');
+      }
+    }
+
+    /* ---------------- Settings UI refresh ---------------- */
+    function refreshSettingsUI() {
+      document.getElementById('aiApiKey').value = getApiKey();
+      document.getElementById('aiTemperature').value = getTemperature();
+      document.getElementById('aiTempVal').innerText = Number(getTemperature()).toFixed(1);
+      document.getElementById('aiMaxTokens').value = getMaxTokens();
+      document.getElementById('aiLanguage').value = getAiLanguage();
+      buildModelSelect();
+      updateKeyStatus();
+      updatePinStatus();
+    }
+
+    // Wire custom model input
+    document.addEventListener('DOMContentLoaded', () => {
+      const customInput = document.getElementById('aiCustomModel');
+      if (customInput) customInput.addEventListener('change', onCustomModelChange);
+      refreshSettingsUI();
+      applyAccentOverride();
+    });
+
+    /* ---------------- Utility ---------------- */
     function escapeHTML(str) {
-      return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+      if (str === undefined || str === null) return '';
+      return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
     }
   </script>
 </body>
